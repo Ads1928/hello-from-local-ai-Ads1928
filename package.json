@@ -1,0 +1,21 @@
+{
+  "name": "agent-index-catalogue",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Low-cost AI catalogue with private view analytics and admin dashboard",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "START_SERVER=false node app.js",
+    "dev": "node --env-file=.env --watch server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@x402/core": "2.31.0",
+    "@x402/evm": "2.31.0",
+    "@x402/express": "2.31.0",
+    "express": "5.3.0"
+  }
+}
