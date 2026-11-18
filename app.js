@@ -48,6 +48,29 @@ app.get('/api/paid-search',search);
 app.use((req,res)=>handler(req,res));
 app.listen(PORT,'0.0.0.0',async () => {
   console.log(`AI catalogue + x402 on port ${PORT}`);
+  if (process.env.DISCOVERY_SELF_TEST === '1') {
+    const checks=[
+      ['/','html'],['/agents','html'],['/robots.txt','text'],['/llms.txt','text'],
+      ['/sitemap.xml','xml'],['/openapi.json','openapi'],
+      ['/.well-known/x402','manifest'],['/api/categories','categories'],
+      ['/api/catalogue?q=agent&limit=5','catalogue']
+    ];
+    for (const [route,type] of checks) {
+      try {
+        const response=await fetch(`http://127.0.0.1:${PORT}${route}`,{signal:AbortSignal.timeout(7000)});
+        const body=await response.text();
+        let valid=response.ok;
+        if(type==='openapi'){const v=JSON.parse(body);valid=valid&&!!v.openapi&&!!v.paths?.['/api/paid-search']?.get?.['x-payment-info'];}
+        if(type==='manifest'){const v=JSON.parse(body);valid=valid&&v.resources?.some(x=>x.includes('/api/paid-search'));}
+        if(type==='catalogue'){const v=JSON.parse(body);valid=valid&&Array.isArray(v.results)&&v.total>=20;}
+        if(type==='categories'){const v=JSON.parse(body);valid=valid&&Array.isArray(v.categories);}
+        if(type==='html'){valid=valid&&body.includes('Agent Index')&&body.includes('<meta name="description"');}
+        if(type==='text'){valid=valid&&body.length>20;}
+        if(type==='xml'){valid=valid&&body.includes('<urlset');}
+        console.log(`DISCOVERY_SELF_TEST route=${route} status=${response.status} valid=${valid}`);
+      } catch(error) {console.error(`DISCOVERY_SELF_TEST route=${route} error=${error.message}`);}
+    }
+  }
   if (process.env.PAYMENT_SELF_TEST === '1') {
     try {
       const response = await fetch(`http://127.0.0.1:${PORT}/api/paid-search?q=security`, {
