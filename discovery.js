@@ -13,6 +13,12 @@ function send(res, status, contentType, body, cache='public, max-age=300') {
 function json(res, value, status=200) {
   send(res,status,'application/json; charset=utf-8',JSON.stringify(value));
 }
+function countApi(db,route) {
+  try {
+    const day=new Date().toISOString().slice(0,10);
+    db.prepare('INSERT INTO api_usage(day,route,calls) VALUES (?,?,1) ON CONFLICT(day,route) DO UPDATE SET calls=calls+1').run(day,route);
+  } catch(error) { console.error('API usage counter failed:',error); }
+}
 function openApi(host,title) {
   return {
     openapi:'3.1.0',
@@ -89,11 +95,13 @@ export function discoveryRoute(req,res,{db,siteName,publicUrl}) {
     return true;
   }
   if (pathname==='/api/categories') {
+    countApi(db,'categories');
     const rows=db.prepare('SELECT category, COUNT(*) AS count FROM listings WHERE active=1 GROUP BY category ORDER BY category').all();
     json(res,{categories:rows,updatedAt:new Date().toISOString()});
     return true;
   }
   if (pathname==='/api/catalogue') {
+    countApi(db,'catalogue');
     const q=String(u.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
     const category=String(u.searchParams.get('category')||'').trim().slice(0,70);
     const limit=Math.max(1,Math.min(50,Number.parseInt(u.searchParams.get('limit'),10)||20));
