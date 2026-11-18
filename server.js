@@ -92,6 +92,39 @@ if (!db.prepare("SELECT value FROM settings WHERE key='seeded'").get()) {
   db.prepare("INSERT INTO settings(key,value) VALUES('seeded','1')").run();
 }
 
+// Carefully curated starter entries for agent builders. No claimed ratings or unverified prices.
+const expandedStarters = [
+ ['Tavily','Research & search','Search and research API designed for AI-assisted workflows.','Tavily provides web search and content retrieval tools that developers can connect to AI applications and agents.','https://tavily.com','See provider','web-search,api,research,agents'],
+ ['Exa','Research & search','Search API for retrieving relevant web content.','Exa provides search and content retrieval APIs for developers building AI-powered research and discovery features.','https://exa.ai','See provider','search,api,web,retrieval'],
+ ['Firecrawl','Research & search','Extract web content in a developer-friendly format.','Firecrawl supplies scraping and crawling tools that can be integrated into AI-agent research and retrieval workflows.','https://www.firecrawl.dev','See provider','crawl,scraping,api,research'],
+ ['Browserbase','Agent infrastructure','Managed browser infrastructure for web automation agents.','Browserbase provides browser sessions for automated agents that need to interact with websites and web applications.','https://www.browserbase.com','See provider','browser,automation,agents,computer-use'],
+ ['Apify','Developer tools','Cloud platform for web scraping and automation.','Apify provides actors, hosted scraping and automation tooling used in data extraction and AI workflows.','https://apify.com','See provider','scraping,automation,data,api'],
+ ['Composio','MCP & agent tools','Tools and app integrations for AI agents.','Composio helps developers connect AI agents with external tools and apps, including authenticated actions.','https://composio.dev','See provider','integrations,agents,mcp,tools'],
+ ['E2B','Agent infrastructure','Secure cloud sandboxes for AI-generated code and agents.','E2B provides isolated execution environments for code-running and computer-using AI agents.','https://e2b.dev','See provider','sandbox,code,agents,infrastructure'],
+ ['CrewAI','Agent frameworks','Framework for building coordinated multi-agent applications.','CrewAI provides tools for designing and running multi-agent workflows and task orchestration.','https://www.crewai.com','See provider','multi-agent,framework,workflow'],
+ ['Dify','Agent frameworks','Build AI workflows, chat applications and agents.','Dify offers a platform for building and managing applications powered by language models and connected tools.','https://dify.ai','See provider','agents,workflow,development'],
+ ['LlamaIndex','Agent frameworks','Data and retrieval frameworks for LLM applications.','LlamaIndex offers components for connecting models to data sources and building retrieval-backed agent systems.','https://www.llamaindex.ai','See provider','rag,retrieval,framework,data'],
+ ['LangGraph','Agent frameworks','Stateful workflow orchestration for AI agents.','LangGraph provides developer tools for orchestrating long-running, stateful agent processes.','https://www.langchain.com/langgraph','See provider','agent,orchestration,framework'],
+ ['Pipedream','Automation','Connect APIs and build event-based workflows.','Pipedream provides integration and workflow infrastructure for connecting external systems and APIs.','https://pipedream.com','See provider','api,workflow,automation'],
+ ['Smithery','MCP & agent tools','Discover and deploy MCP servers and agent tools.','Smithery is a developer-oriented directory and platform for finding Model Context Protocol servers and integrations.','https://smithery.ai','See provider','mcp,servers,tools,registry'],
+ ['Mastra','Agent frameworks','TypeScript framework for building AI agents.','Mastra provides framework components for building AI agent workflows in TypeScript.','https://mastra.ai','See provider','typescript,framework,agent'],
+ ['Langfuse','Observability','Tracing and evaluation for language-model applications.','Langfuse provides observability, prompt management and evaluation tooling for teams running AI applications.','https://langfuse.com','See provider','tracing,evaluation,observability'],
+ ['Pinecone','Vector databases','Managed vector search and data retrieval.','Pinecone provides vector database infrastructure for semantic search and retrieval-based AI applications.','https://www.pinecone.io','See provider','vector,search,database,rag'],
+ ['Qdrant','Vector databases','Vector search platform for AI applications.','Qdrant provides vector search and retrieval infrastructure for semantic search and AI systems.','https://qdrant.tech','See provider','vector,database,search'],
+ ['Weaviate','Vector databases','Vector database for semantic search applications.','Weaviate is a vector database platform supporting retrieval and semantic search use cases.','https://weaviate.io','See provider','vector,database,rag,search'],
+ ['AgentOps','Observability','Monitor and evaluate agent runs.','AgentOps provides monitoring, observability and debugging tools for AI agents.','https://www.agentops.ai','See provider','monitoring,observability,agents'],
+ ['Together AI','APIs & models','Cloud API for serving and using AI models.','Together AI provides hosted model inference and developer tools for AI applications.','https://www.together.ai','See provider','models,api,inference'],
+ ['Groq','APIs & models','Fast inference platform for language models.','Groq provides language-model inference APIs and developer infrastructure.','https://groq.com','See provider','inference,models,api']
+];
+if (!db.prepare("SELECT value FROM settings WHERE key='expanded_seed_v1'").get()) {
+  const add = db.prepare('INSERT OR IGNORE INTO listings (name,slug,category,summary,description,website_url,pricing,tags,active,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,1,?,?)');
+  for (const [name,category,summary,description,website,pricing,tags] of expandedStarters) {
+    const exists=db.prepare('SELECT id FROM listings WHERE slug=?').get(slugify(name));
+    if (!exists) { const now=Date.now();add.run(name,slugify(name),category,summary,description,website,pricing,tags,now,now); }
+  }
+  db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('expanded_seed_v1','1')").run();
+}
+
 const esc = (value='') => String(value ?? '').replace(/[&<>"']/g, x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const number = value => Number(value || 0).toLocaleString('en-GB');
 const niceDate = ms => new Date(Number(ms)).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});
@@ -155,7 +188,7 @@ function cataloguePage(q='',cat='') {
   if(cat) {sql+=' AND category=?';params.push(cat);}
   sql+=' ORDER BY name COLLATE NOCASE'; const list=db.prepare(sql).all(...params);
   const filters=`<form class="search" method="get" action="/search"><div class="search-box"><span class="glass">⌕</span><input type="search" name="q" value="${esc(q)}" placeholder="Search AI agents, APIs and tools…" maxlength="100" aria-label="Search catalogue"><button type="submit" class="primary">Search</button></div><div class="filters"><label for="cat">Category</label><select name="category" id="cat"><option value="">All categories</option>${categories().map(c=>`<option value="${esc(c)}" ${cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select><span class="results">${number(list.length)} tools</span></div></form>`;
-  return layout('Discover',`<section class="hero"><div class="eyebrow"><span class="dot"></span> INDEPENDENT AI DIRECTORY</div><h1>Find the right <em>AI tool</em><br>for whatever's next.</h1><p class="lede">A useful, searchable catalogue of AI agents, tools and APIs. No noise, just places to start exploring.</p></section>${filters}<div class="section-head"><div><div class="eyebrow soft">EXPLORE THE DIRECTORY</div><h2>${q||cat?'Search results':'Browse all tools'}</h2></div><p class="muted">${number(list.length)} listings</p></div>${list.length?`<section class="cards">${list.map(listingCard).join('')}</section>`:`<div class="empty"><h3>No matches found</h3><p>Try a different search or category.</p><a class="button outline" href="/">Clear filters</a></div>`}`);
+  return layout('Discover',`<section class="hero"><div class="eyebrow"><span class="dot"></span> INDEPENDENT AI DIRECTORY</div><h1>Find the right <em>AI tool</em><br>for whatever's next.</h1><p class="lede">A useful, searchable catalogue of AI agents, tools and APIs. No noise, just places to start exploring.</p></section><section class="agent-banner"><div><span class="eyebrow soft">FOR AI AGENTS & DEVELOPERS</span><h2>Find tools with an API, not just a browser.</h2><p>Browse the public JSON catalogue for free or use an optional $0.05 x402 premium search for detailed ranked results.</p></div><div class="agent-banner-actions"><a class="button primary" href="/agents">Explore agent access ↗</a><a class="button outline" href="/openapi.json">View API spec</a></div></section>${filters}<div class="section-head"><div><div class="eyebrow soft">EXPLORE THE DIRECTORY</div><h2>${q||cat?'Search results':'Browse all tools'}</h2></div><p class="muted">${number(list.length)} listings</p></div>${list.length?`<section class="cards">${list.map(listingCard).join('')}</section>`:`<div class="empty"><h3>No matches found</h3><p>Try a different search or category.</p><a class="button outline" href="/">Clear filters</a></div>`}`);
 }
 function detailPage(x) {
   const other=db.prepare('SELECT * FROM listings WHERE active=1 AND category=? AND id!=? LIMIT 3').all(x.category,x.id);
