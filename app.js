@@ -46,4 +46,19 @@ function search(req,res) {
 }
 app.get('/api/paid-search',search);
 app.use((req,res)=>handler(req,res));
-app.listen(PORT,'0.0.0.0',()=>console.log(`AI catalogue + x402 on port ${PORT}`));
+app.listen(PORT,'0.0.0.0',async () => {
+  console.log(`AI catalogue + x402 on port ${PORT}`);
+  if (process.env.PAYMENT_SELF_TEST === '1') {
+    try {
+      const response = await fetch(`http://127.0.0.1:${PORT}/api/paid-search?q=security`, {
+        headers: { accept: 'application/json', 'user-agent': 'AgentIndex-Payment-SelfTest/1.0' },
+        signal: AbortSignal.timeout(12000),
+      });
+      const hasPaymentHeader = Boolean(response.headers.get('payment-required'));
+      const body = await response.text();
+      console.log(`PAYMENT_SELF_TEST status=${response.status} payment_required_header=${hasPaymentHeader} body_has_payment_requirements=${body.includes('paymentRequirements') || body.includes('accepts')}`);
+    } catch (error) {
+      console.error('PAYMENT_SELF_TEST error:', error.message);
+    }
+  }
+});
