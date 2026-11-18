@@ -23,6 +23,15 @@ resourceServer.onAfterSettle(async ctx => {
 });
 
 app.disable('x-powered-by');
+app.use((req,res,next) => {
+  if (req.method==='GET' && req.path==='/api/paid-search') {
+    try {
+      const day=new Date().toISOString().slice(0,10);
+      db.prepare('INSERT INTO api_usage(day,route,calls) VALUES (?,?,1) ON CONFLICT(day,route) DO UPDATE SET calls=calls+1').run(day,'premium');
+    } catch(error) { console.error('Premium usage counter failed:',error); }
+  }
+  next();
+});
 app.use(paymentMiddleware({
   'GET /api/paid-search':{
     accepts:[{scheme:'exact',price:'$0.05',network:'eip155:8453',payTo:WALLET}],
