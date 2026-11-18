@@ -53,7 +53,7 @@ app.listen(PORT,'0.0.0.0',async () => {
       ['/','html'],['/agents','html'],['/robots.txt','text'],['/llms.txt','text'],
       ['/sitemap.xml','xml'],['/openapi.json','openapi'],
       ['/.well-known/x402','manifest'],['/api/categories','categories'],
-      ['/api/catalogue?q=agent&limit=5','catalogue']
+      ['/api/catalogue?limit=5','catalogue']
     ];
     for (const [route,type] of checks) {
       try {
