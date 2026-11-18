@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: agent-index-catalogue
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SITE_NAME
+        value: Agent Index
+      - key: START_SERVER
+        value: "false"
+      - key: DB_PATH
+        value: /tmp/catalogue.sqlite
+      - key: X402_FACILITATOR_URL
+        value: https://facilitator.xpay.sh
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: APP_SECRET
+        generateValue: true
